@@ -1,0 +1,150 @@
+import cv2
+import numpy as np
+import face_recognition
+import os
+from datetime import datetime
+from datetime  import date
+
+
+
+def myfunc():
+    path = 'find'
+    images = []
+    classnames = []
+    mylist = os.listdir(path)
+    # (mylist)
+    will = ' '
+    while True:
+
+        while will not in 'a''b''c':
+            will = input("Press a)Attendance b)New Entry c)Close : ")
+            if will not in 'a''b''c':
+                print("Invalid Input")
+            else:
+                if will == 'a':
+                    for cl in mylist:
+                        curImg = cv2.imread(f'{path}/{cl}')
+                        images.append(curImg)
+                        classnames.append(os.path.splitext(cl)[0])
+
+                    # print(classnames)
+
+                    def findEncodings(images):
+                        encodeList = []
+                        for img in images:
+                            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                            encode = face_recognition.face_encodings(img)[0]
+                            encodeList.append(encode)
+                        return encodeList
+
+                    def markAttendance(name):
+
+                        with open('Attendance.csv', 'r+') as f:
+                            myDatalist = f.readlines()
+                            nameList = []
+                            for line in myDatalist:
+                                entry = line.split(',')
+                                nameList.append(entry[0])
+                            if name not in nameList:
+                                print("{} attendance marked".format(name))
+                                now = datetime.now()
+                                now1 = date.today()
+                                dtString = now.strftime('%H:%M:%S')
+
+                                f.writelines(f'\n{name},{dtString},{now1}')
+
+                            # print(myDatalist)
+
+                    encodeListKnown = findEncodings(images)
+
+                    print("Encoding Complete")
+
+                    cap = cv2.VideoCapture(0)
+
+                    while True:
+                        success, img = cap.read()
+                        imgS = cv2.resize(img, (0, 0), None, 0.25, 0.25)
+                        imgS = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+                        facesCurFrame = face_recognition.face_locations(imgS)
+                        encodeCurFrame = face_recognition.face_encodings(imgS, facesCurFrame)
+
+                        for encodeFace, faceLoc in zip(encodeCurFrame, facesCurFrame):
+                            matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
+                            facedis = face_recognition.face_distance(encodeListKnown, encodeFace)
+                            # print(facedis)
+
+                            matchIndex = np.argmin(facedis)
+
+                            if matches[matchIndex]:
+                                name = classnames[matchIndex].upper()
+                                # print(name)
+                                y1, x2, y2, x1 = faceLoc
+
+                                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                                cv2.rectangle(img, (x1, y2 - 35), (x2, y2), (0, 255, 0), cv2.FILLED)
+                                cv2.putText(img, name, (x1 + 6, y2 - 6), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1,
+                                            (255, 255, 255))
+                                markAttendance(name)
+
+                        cv2.imshow('Webcam', img)
+                        k = cv2.waitKey(1)
+                        if k % 256 == 27:
+                            # ESC pressed
+                            print("Escape hit, closing...")
+                            break
+
+                    cv2.destroyAllWindows()
+
+                elif will == 'b':
+                    name = input("Enter Your Name : ")
+                    print("\n Press Space For Capturing Image \n Press Escape for Closing")
+                    cam = cv2.VideoCapture(0)
+
+                    cv2.namedWindow("test")
+                    while True:
+                        ret, frame = cam.read()
+                        if not ret:
+                            print("failed to grab frame")
+                            break
+                        cv2.imshow("test", frame)
+                        cv2.waitKey(1)
+
+                        k = cv2.waitKey(1)
+                        if k % 256 == 27:
+                            # ESC pressed
+                            print("Image Saved /n Program Closed")
+                            break
+
+                        if k % 256 == 32:
+                            # SPACE pressed
+                            img_name = "{}.png".format(name)
+                            path = 'C:/Users/Dell/PycharmProjects/pythonProject1/find/'
+                            cv2.imwrite(os.path.join(path, img_name), frame)
+                            print("{} saved!".format(name))
+
+                    cam.release()
+                    cv2.destroyAllWindows()
+
+
+
+
+
+
+                elif will == 'c':
+                    print("Program Closing Wait.......")
+
+                else:
+                    pass
+
+        againwill = input("Do you want to start again Y,N : ")
+        if againwill.lower() == 'y':
+            myfunc()
+        elif againwill.lower() == 'n':
+            print("Program Closed")
+            break
+        else:
+            print("Invalid Input")
+
+
+myfunc()
